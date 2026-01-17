@@ -35,7 +35,7 @@ In using an internal i64, the maximum transaction total/amount is capped at `i64
 
 ### Async Architecture
 
-For the proper async architecture for this project, I debated between using `futures::Stream`s, `tokio::mpsc` channels, or `std::mpsc` channels. As `Stream`s are the async version of `Iterator`s, this made the most sense to me right off the bat, especially given that I was reading out of a CSV into an iterator.
+For the proper async architecture for this project, I debated between using `futures::Stream`s, `tokio::mpsc` channels, or `std::mpsc` channels. As `Stream`s are the async version of `Iterator`s, this made the most sense to me at first, especially given that I was reading out of a CSV into an iterator.
 
 However, because this is meant to represent a holistic engine which supports many clients/transactions concurrently, yet still needs to handle everything chronologically, the "multi-producer" aspect of `mpsc` channels appealed, and I ultimately landed on the `tokio` version over `std` simply to allow for the multi-threaded feel even when this process is being run single-threaded. I believe that using `std::mpsc` channels could have been viable here as well.
 
@@ -78,7 +78,7 @@ Each `ClientAccount` maintains a ledger of successful transactions. This enables
 
 In creating this crate, some meta design questions came up. I've detailed these questions, and how I answered them, below:
 
-1. ***Can withdrawals be disputed?*** This is an interesting question. In the real world, institutions usually see customers disputing withdrawals because they believe money was incorrectly taken from them (eg. unauthorized charge, double charge, etc.). However, our spec has described disputes as incorrect deposits rather than incorrect withdrawal, and gives no mention of the other. Given this baseline, I've decided to go with the simple version of this concept to only allow disputes for deposits.
+1. ***Can withdrawals be disputed?*** This is an interesting question. In the real world, institutions usually see customers disputing withdrawals because they believe money was incorrectly taken from them (eg. unauthorized charge, double charge, etc.). However, because we are focused on catching fraud, we describe disputes as incorrect deposits rather than incorrect withdrawal. Given this baseline, I've decided to go with the simple version of this concept to only allow disputes for deposits.
 2. ***How many transactions can a client dispute simultaneously?*** Based on real world institutions, I think it makes sense that multiple transactions can be simultaneously disputed. However, each transaction can only be disputed once total.
 3. ***What transactions are allowed after an account is frozen?*** Presumably, after an account has been frozen due to a chargeback, we definitely cannot allow any more deposits or withdrawals. *Can the customer initiate more disputes?* I decided that after an account has been frozen, the customer cannot initiate any more disputes. However, we allow existing disputes (initiated before the freeze) to complete their resolution or chargeback. This prevents a chargeback from orphaning in-flight disputes.
 4. ***Withdrawal limitations:*** Withdrawals cannot be negative. Overcharge withdrawals are ignored.
